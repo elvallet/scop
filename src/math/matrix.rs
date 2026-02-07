@@ -44,7 +44,7 @@
 //! normal outcome that must be handled by callers.
 
 use crate::math::vector::Vector;
-use crate::math::scalar::{One, Zero, Field};
+use super::scalar::{One, Zero, Field};
 use core::ops::{Add, Mul, Sub};
 
 /// Numerical tolerance used to treat small values as zero in elimination-based algorithms.
@@ -198,10 +198,6 @@ impl<K: Copy + Mul<Output = K>> Matrix<K> {
         for x in &mut self.data {
             *x =  *x * a;
         }
-    }
-
-    pub fn scale(&mut self, a: K) {
-        self.scl(a);
     }
 }
 

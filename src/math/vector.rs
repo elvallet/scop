@@ -179,7 +179,46 @@ where
     }
 }
 
-impl<K: Copy + Abs> Vector<K> {
+impl<K> Vector<K>
+where
+    K: One + Zero + Add<Output = K> + Mul<Output = K> + Sub<Output = K> + From<f32> + Copy + Zero + Abs + Mul<Output = K>,
+{
+    /// Returns a normalized copy of the vector (unit length).
+    ///
+    /// # Panics (debug)
+    /// Panics if the vector has zero norm.
+    pub fn normalize(&self) -> Vector<K> 
+    {
+        let n = self.norm();
+        debug_assert!(n > 0.0, "cannot normalize a zero vector");
+        
+        let inv_norm = K::from(1.0 / n);
+        let mut result = self.clone();
+        result.scl(inv_norm);
+        result
+    }
+}
+
+impl<K> Vector<K>
+where
+    K: Copy + Sub<Output = K>,
+{
+    /// Returns a new vector: `self - other`
+    pub fn sub_vec(&self, other: &Vector<K>) -> Vector<K> {
+        debug_assert_eq!(self.len(), other.len(), "Vector size mismatch");
+        
+        let data: Vec<K> = self.data.iter()
+            .zip(other.data.iter())
+            .map(|(&a, &b)| a - b)
+            .collect();
+        
+        Vector::new(data)
+    }
+}
+
+impl<K> Vector<K>
+where
+    K: Copy + Zero + Abs + Mul<Output = K>,  {
     /// Computes the L1 norm (Manhattan norm).
     ///
     /// \[ ||u||₁ = Σ |uᵢ| \]
