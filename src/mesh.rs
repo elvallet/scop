@@ -1,0 +1,61 @@
+#[derive(Debug, Clone, Copy)]
+pub struct Vertex {
+	pub position: [f32; 3],
+	pub tex_coords: [f32; 2],
+	pub normal: [f32; 3],
+	pub color: [f32; 3],
+}
+
+impl Vertex {
+	pub fn default() -> Self {
+		Self {
+			position: [0.0, 0.0, 0.0],
+			tex_coords: [0.0, 0.0],
+			normal: [0.0, 1.0, 0.0],
+			color: [0.0, 0.0, 0.0],
+		}
+	}
+}
+
+#[derive(Debug)]
+pub struct Mesh {
+	pub vertices: Vec<Vertex>,
+	pub indices: Vec<u32>,
+}
+
+impl Mesh {
+	pub fn compute_centroid(&self) -> [f32; 3] {
+		if self.vertices.is_empty() {
+			return [0.0, 0.0, 0.0];
+		}
+
+		let sum = self.vertices.iter().fold([0.0, 0.0, 0.0], |acc, v| {
+			[
+				acc[0] + v.position[0],
+				acc[1] + v.position[1],
+				acc[2] + v.position[2],
+			]
+		});
+
+		let n = self.vertices.len() as f32;
+		[sum[0] / n, sum[1] / n, sum[2] / n]
+	}
+
+	pub fn compute_bounding_box(&self) -> ([f32; 3], [f32; 3]) {
+		if self.vertices.is_empty() {
+			return ([0.0; 3], [0.0; 3]);
+		}
+
+		let mut min = self.vertices[0].position;
+		let mut max = self.vertices[0].position;
+
+		for vertex in &self.vertices {
+			for i in 0..3 {
+				min[i] = min[i].min(vertex.position[i]);
+				max[i] = max[i].max(vertex.position[i]);
+			}
+		}
+
+		(min, max)
+	}
+}
