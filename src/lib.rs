@@ -5,3 +5,8 @@ pub use parser::load_obj;
 
 pub mod mesh;
 pub use mesh::{Mesh, Vertex};
+
+pub mod renderer;
+pub use renderer::instance::VulkanInstance;
+
+pub mod app;
