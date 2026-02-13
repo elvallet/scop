@@ -9,3 +9,6 @@ pub use swapchain::VulkanSwapchain;
 
 pub mod render_pass;
 pub use render_pass::VulkanRenderPass;
+
+pub mod shader;
+pub use shader::ShaderModule;
