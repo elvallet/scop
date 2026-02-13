@@ -1,4 +1,5 @@
 mod app;
+mod mesh;
 mod renderer;
 
 use winit::event_loop::{ControlFlow, EventLoop};

@@ -11,4 +11,6 @@ pub mod render_pass;
 pub use render_pass::VulkanRenderPass;
 
 pub mod shader;
-pub use shader::ShaderModule;
+
+pub mod pipeline;
+pub use pipeline::VulkanPipeline;

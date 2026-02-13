@@ -5,7 +5,7 @@ use winit::{
 	window::Window
 };
 use crate::renderer::{
-	VulkanDevice, VulkanInstance, VulkanRenderPass, VulkanSwapchain
+	VulkanDevice, VulkanInstance, VulkanRenderPass, VulkanSwapchain, VulkanPipeline
 };
 use ash::vk;
 
@@ -17,6 +17,7 @@ pub struct App {
 	device: Option<VulkanDevice>,
 	swapchain: Option<VulkanSwapchain>,
 	render_pass: Option<VulkanRenderPass>,
+	pipeline: Option<VulkanPipeline>,
 }
 
 impl Default for App {
@@ -29,6 +30,7 @@ impl Default for App {
 			device: None,
 			swapchain: None,
 			render_pass: None,
+			pipeline: None,
 		}
 	}
 }
@@ -74,6 +76,13 @@ impl ApplicationHandler for App {
 		)
 		.expect("Failed to create render pass");
 
+		let pipeline = VulkanPipeline::new(
+			&device.device,
+			render_pass.render_pass,
+			swapchain.extent,
+		)
+		.expect("Failed to create pipeline");
+
 		self.window = Some(window);
 		self.vulkan_instance = Some(vulkan_instance);
 		self.surface = Some(surface);
@@ -81,6 +90,7 @@ impl ApplicationHandler for App {
 		self.device = Some(device);
 		self.swapchain = Some(swapchain);
 		self.render_pass = Some(render_pass);
+		self.pipeline = Some(pipeline);
 	}
 
 	fn window_event(
@@ -111,8 +121,11 @@ impl ApplicationHandler for App {
 
 impl App {
 	fn handle_resize(&mut self, width: u32, height: u32) {
-		if let (Some(instance), Some(device), Some(surface), Some(surface_loader), Some(swapchain), Some(render_pass)) =
-			(&self.vulkan_instance, &self.device, self.surface, &self.surface_loader, &mut self.swapchain, &mut self.render_pass)
+		if let (Some(instance), Some(device), Some(surface),
+				Some(surface_loader), Some(swapchain), Some(render_pass),
+				Some(pipeline)) =
+			(&self.vulkan_instance, &self.device, self.surface, &self.surface_loader, &mut self.swapchain,
+				&mut self.render_pass, &mut self.pipeline)
 		{
 			swapchain.recreate(
 				&instance.instance,
@@ -128,6 +141,13 @@ impl App {
 				&swapchain.image_views,
 				swapchain.extent
 			).expect("Failed to framebuffers");
+
+			pipeline.cleanup(&device.device);
+			*pipeline = VulkanPipeline::new(
+				&device.device,
+				render_pass.render_pass,
+				swapchain.extent
+			).expect("Failed to recreate pipeline");
 		}
 	}
 
@@ -136,6 +156,11 @@ impl App {
 			if let Some(device) = &self.device {
 				device.device.device_wait_idle().expect("Failed to wait for device idle");
 			}
+
+			if let (Some(pipeline), Some(device)) = (&self.pipeline, &self.device) {
+				pipeline.cleanup(&device.device);
+			}
+			drop(self.pipeline.take());
 
 			if let (Some(render_pass), Some(device)) = (&self.render_pass, &self.device) {
 				render_pass.cleanup(&device.device);
