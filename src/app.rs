@@ -4,17 +4,30 @@ use winit::{
 	event_loop::ActiveEventLoop,
 	window::Window
 };
-use crate::renderer::{VulkanInstance, VulkanDevice};
+use crate::renderer::{VulkanInstance, VulkanDevice, VulkanSwapchain};
 use ash::vk;
 
-#[derive(Default)]
 pub struct App {
 	window: Option<Window>,
 	vulkan_instance: Option<VulkanInstance>,
 	surface: Option<vk::SurfaceKHR>,
 	surface_loader: Option<ash::khr::surface::Instance>,
 	device: Option<VulkanDevice>,
+	swapchain: Option<VulkanSwapchain>,
 
+}
+
+impl Default for App {
+	fn default() -> Self {
+		Self {
+			window: None,
+			vulkan_instance: None,
+			surface: None,
+			surface_loader: None,
+			device: None,
+			swapchain: None,
+		}
+	}
 }
 
 impl ApplicationHandler for App {
@@ -39,11 +52,23 @@ impl ApplicationHandler for App {
 		let device = VulkanDevice::new(&vulkan_instance.instance, surface, &surface_loader)
 			.expect("Failed to create device");
 
+		let size = window.inner_size();
+		let swapchain = VulkanSwapchain::new(
+			&vulkan_instance.instance,
+			&device,
+			surface,
+			&surface_loader,
+			size.width,
+			size.height,
+		)
+		.expect("Failed to create swapchain");
+
 		self.window = Some(window);
 		self.vulkan_instance = Some(vulkan_instance);
 		self.surface = Some(surface);
 		self.surface_loader = Some(surface_loader);
 		self.device = Some(device);
+		self.swapchain = Some(swapchain);
 	}
 
 	fn window_event(
@@ -59,7 +84,21 @@ impl ApplicationHandler for App {
 			},
 			WindowEvent::Resized(size) => {
 				println!("Window resized to {:?}", size);
-				// Recréer swapchain
+
+				if size.width > 0 && size.height > 0 {
+					if let (Some(instance), Some(device), Some(surface), Some(surface_loader), Some(swapchain)) =
+						(&self.vulkan_instance, &self.device, self.surface, &self.surface_loader, &mut self.swapchain)
+					{
+						swapchain.recreate(
+							&instance.instance,
+							device,
+							surface,
+							surface_loader,
+							size.width,
+							size.height,
+						).expect("Failed to recreate swapchain");
+					}
+				}
 			}
 			WindowEvent::RedrawRequested => {
 				// Render frame
@@ -69,9 +108,18 @@ impl ApplicationHandler for App {
 	}
 }
 
-impl Drop for App {
-	fn drop(&mut self) {
+impl App {
+	fn cleanup(&mut self) {
 		unsafe {
+			if let Some(device) = &self.device {
+				device.device.device_wait_idle().expect("Failed to wait for device idle");
+			}
+
+			if let (Some(swapchain), Some(device)) = (&mut self.swapchain, &self.device) {
+				swapchain.cleanup(&device.device);
+			}
+			drop(self.swapchain.take());
+
 			drop(self.device.take());
 
 			if let (Some(_instance), Some(surface)) = (&self.vulkan_instance, self.surface) {
@@ -82,5 +130,11 @@ impl Drop for App {
 
 			drop(self.vulkan_instance.take());
 		}
+	}
+}
+
+impl Drop for App {
+	fn drop(&mut self) {
+		self.cleanup();
 	}
 }
