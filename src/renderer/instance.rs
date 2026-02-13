@@ -1,5 +1,5 @@
 use ash::{vk, Entry};
-use raw_window_handle::HasDisplayHandle;
+use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 use std::ffi::{CStr};
 
 pub struct VulkanInstance {
@@ -140,18 +140,40 @@ impl VulkanInstance {
 
 		Ok(DebugUtils { loader: debug_utils_loader, messenger })
 	}
+
+	pub fn create_surface(
+		&self,
+		window: &winit::window::Window,
+	) -> Result<(vk::SurfaceKHR, ash::khr::surface::Instance), String> {
+		let surface = unsafe {
+			ash_window::create_surface(
+				&self.entry,
+				&self.instance,
+				window.display_handle().unwrap().as_raw(),
+				window.window_handle().unwrap().as_raw(),
+				None,
+			)
+			.map_err(|e| format!("Failed to create surface: {}", e))?
+		};
+
+		let surface_loader = ash::khr::surface::Instance::new(&self.entry, &self.instance);
+
+		println!("✓ Surface created");
+
+		Ok((surface, surface_loader))
+	}
 }
 
 // Callback for validation messages
 #[cfg(debug_assertions)]
-unsafe extern "system" fn vulkan_debug_callback(
+extern "system" fn vulkan_debug_callback(
 	message_severity: vk::DebugUtilsMessageSeverityFlagsEXT,
 	message_type: vk::DebugUtilsMessageTypeFlagsEXT,
 	p_callback_data: *const vk::DebugUtilsMessengerCallbackDataEXT,
 	_p_user_data: *mut std::ffi::c_void,
 ) -> vk::Bool32 {
-	let callback_data = *p_callback_data;
-	let message = CStr::from_ptr(callback_data.p_message);
+	let callback_data = unsafe { *p_callback_data };
+	let message = unsafe { CStr::from_ptr(callback_data.p_message) };
 
 	let severity = match message_severity {
 		vk::DebugUtilsMessageSeverityFlagsEXT::VERBOSE => "[VERBOSE]",
