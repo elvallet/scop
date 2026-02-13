@@ -4,7 +4,9 @@ use winit::{
 	event_loop::ActiveEventLoop,
 	window::Window
 };
-use crate::renderer::{VulkanInstance, VulkanDevice, VulkanSwapchain};
+use crate::renderer::{
+	VulkanDevice, VulkanInstance, VulkanRenderPass, VulkanSwapchain
+};
 use ash::vk;
 
 pub struct App {
@@ -14,7 +16,7 @@ pub struct App {
 	surface_loader: Option<ash::khr::surface::Instance>,
 	device: Option<VulkanDevice>,
 	swapchain: Option<VulkanSwapchain>,
-
+	render_pass: Option<VulkanRenderPass>,
 }
 
 impl Default for App {
@@ -26,6 +28,7 @@ impl Default for App {
 			surface_loader: None,
 			device: None,
 			swapchain: None,
+			render_pass: None,
 		}
 	}
 }
@@ -63,12 +66,21 @@ impl ApplicationHandler for App {
 		)
 		.expect("Failed to create swapchain");
 
+		let render_pass = VulkanRenderPass::new(
+			&device.device,
+			swapchain.format,
+			&swapchain.image_views,
+			swapchain.extent,
+		)
+		.expect("Failed to create render pass");
+
 		self.window = Some(window);
 		self.vulkan_instance = Some(vulkan_instance);
 		self.surface = Some(surface);
 		self.surface_loader = Some(surface_loader);
 		self.device = Some(device);
 		self.swapchain = Some(swapchain);
+		self.render_pass = Some(render_pass);
 	}
 
 	fn window_event(
@@ -86,18 +98,7 @@ impl ApplicationHandler for App {
 				println!("Window resized to {:?}", size);
 
 				if size.width > 0 && size.height > 0 {
-					if let (Some(instance), Some(device), Some(surface), Some(surface_loader), Some(swapchain)) =
-						(&self.vulkan_instance, &self.device, self.surface, &self.surface_loader, &mut self.swapchain)
-					{
-						swapchain.recreate(
-							&instance.instance,
-							device,
-							surface,
-							surface_loader,
-							size.width,
-							size.height,
-						).expect("Failed to recreate swapchain");
-					}
+					self.handle_resize(size.width, size.height);
 				}
 			}
 			WindowEvent::RedrawRequested => {
@@ -109,11 +110,37 @@ impl ApplicationHandler for App {
 }
 
 impl App {
+	fn handle_resize(&mut self, width: u32, height: u32) {
+		if let (Some(instance), Some(device), Some(surface), Some(surface_loader), Some(swapchain), Some(render_pass)) =
+			(&self.vulkan_instance, &self.device, self.surface, &self.surface_loader, &mut self.swapchain, &mut self.render_pass)
+		{
+			swapchain.recreate(
+				&instance.instance,
+				device,
+				surface,
+				surface_loader,
+				width,
+				height,
+			).expect("Failed to recreate swapchain");
+
+			render_pass.recreate_framebuffers(
+				&device.device,
+				&swapchain.image_views,
+				swapchain.extent
+			).expect("Failed to framebuffers");
+		}
+	}
+
 	fn cleanup(&mut self) {
 		unsafe {
 			if let Some(device) = &self.device {
 				device.device.device_wait_idle().expect("Failed to wait for device idle");
 			}
+
+			if let (Some(render_pass), Some(device)) = (&self.render_pass, &self.device) {
+				render_pass.cleanup(&device.device);
+			}
+			drop(self.render_pass.take());
 
 			if let (Some(swapchain), Some(device)) = (&mut self.swapchain, &self.device) {
 				swapchain.cleanup(&device.device);

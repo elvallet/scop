@@ -6,3 +6,6 @@ pub use device::VulkanDevice;
 
 pub mod swapchain;
 pub use swapchain::VulkanSwapchain;
+
+pub mod render_pass;
+pub use render_pass::VulkanRenderPass;
