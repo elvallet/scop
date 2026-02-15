@@ -1,16 +1,19 @@
+mod command;
+mod device;
 pub mod instance;
-pub use instance::VulkanInstance;
+mod pipeline;
+mod render_pass;
+mod renderer;
+mod shader;
+mod swapchain;
+mod sync;
 
-pub mod device;
+pub use command::VulkanCommands;
 pub use device::VulkanDevice;
-
-pub mod swapchain;
-pub use swapchain::VulkanSwapchain;
-
-pub mod render_pass;
-pub use render_pass::VulkanRenderPass;
-
-pub mod shader;
-
-pub mod pipeline;
+pub use instance::VulkanInstance;
 pub use pipeline::VulkanPipeline;
+pub use render_pass::VulkanRenderPass;
+pub use renderer::Renderer;
+pub use shader::ShaderModule;
+pub use swapchain::VulkanSwapchain;
+pub use sync::VulkanSync;

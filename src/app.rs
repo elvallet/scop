@@ -5,7 +5,7 @@ use winit::{
 	window::Window
 };
 use crate::renderer::{
-	VulkanDevice, VulkanInstance, VulkanRenderPass, VulkanSwapchain, VulkanPipeline
+	Renderer, VulkanDevice, VulkanInstance, VulkanPipeline, VulkanRenderPass, VulkanSwapchain
 };
 use ash::vk;
 
@@ -18,6 +18,7 @@ pub struct App {
 	swapchain: Option<VulkanSwapchain>,
 	render_pass: Option<VulkanRenderPass>,
 	pipeline: Option<VulkanPipeline>,
+	renderer: Option<Renderer>,
 }
 
 impl Default for App {
@@ -31,6 +32,7 @@ impl Default for App {
 			swapchain: None,
 			render_pass: None,
 			pipeline: None,
+			renderer: None,
 		}
 	}
 }
@@ -83,6 +85,9 @@ impl ApplicationHandler for App {
 		)
 		.expect("Failed to create pipeline");
 
+		let renderer = Renderer::new(&device)
+			.expect("Failed to create renderer");
+
 		self.window = Some(window);
 		self.vulkan_instance = Some(vulkan_instance);
 		self.surface = Some(surface);
@@ -91,6 +96,7 @@ impl ApplicationHandler for App {
 		self.swapchain = Some(swapchain);
 		self.render_pass = Some(render_pass);
 		self.pipeline = Some(pipeline);
+		self.renderer = Some(renderer);
 	}
 
 	fn window_event(
@@ -112,7 +118,7 @@ impl ApplicationHandler for App {
 				}
 			}
 			WindowEvent::RedrawRequested => {
-				// Render frame
+				self.draw_frame();
 			}
 			_ => {}
 		}	
@@ -120,6 +126,16 @@ impl ApplicationHandler for App {
 }
 
 impl App {
+	fn draw_frame(&mut self) {
+		if let (Some(device), Some(swapchain), Some(render_pass), Some(pipeline), Some(renderer)) =
+			(&self.device, &self.swapchain, &self.render_pass, &self.pipeline, &mut self.renderer)
+		{
+			if let Err(e) = renderer.draw_frame(device, swapchain, render_pass, pipeline) {
+				eprintln!("Failed to draw frame: {}", e);
+			}
+		}
+	}
+
 	fn handle_resize(&mut self, width: u32, height: u32) {
 		if let (Some(instance), Some(device), Some(surface),
 				Some(surface_loader), Some(swapchain), Some(render_pass),
@@ -156,6 +172,11 @@ impl App {
 			if let Some(device) = &self.device {
 				device.device.device_wait_idle().expect("Failed to wait for device idle");
 			}
+
+			if let (Some(renderer), Some(device)) = (&self.renderer, &self.device) {
+				renderer.cleanup(&device.device);
+			}
+			drop(self.renderer.take());
 
 			if let (Some(pipeline), Some(device)) = (&self.pipeline, &self.device) {
 				pipeline.cleanup(&device.device);
