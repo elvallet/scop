@@ -65,7 +65,78 @@ impl VulkanCommands {
 		Ok(command_buffers)
 	}
 
-	pub fn record_command_buffer(
+    pub fn record_command_buffer(
+        &self,
+        device: &ash::Device,
+        command_buffer: vk::CommandBuffer,
+        framebuffer: vk::Framebuffer,
+        render_pass: vk::RenderPass,
+        extent: vk::Extent2D,
+        pipeline: vk::Pipeline,
+    ) -> Result<(), String> {
+        let begin_info = vk::CommandBufferBeginInfo::default();
+
+        unsafe {
+            device
+                .begin_command_buffer(command_buffer, &begin_info)
+                .map_err(|e| format!("Failed to begin command buffer: {}", e))?;
+        }
+
+        let clear_color = vk::ClearValue {
+            color: vk::ClearColorValue {
+                float32: [0.1, 0.1, 0.15, 1.0], // Bleu-gris foncé
+            },
+        };
+
+        let render_pass_info = vk::RenderPassBeginInfo::default()
+            .render_pass(render_pass)
+            .framebuffer(framebuffer)
+            .render_area(vk::Rect2D {
+                offset: vk::Offset2D { x: 0, y: 0 },
+                extent,
+            })
+            .clear_values(std::slice::from_ref(&clear_color));
+
+        unsafe {
+            device.cmd_begin_render_pass(
+                command_buffer,
+                &render_pass_info,
+                vk::SubpassContents::INLINE,
+            );
+
+            device.cmd_bind_pipeline(
+                command_buffer,
+                vk::PipelineBindPoint::GRAPHICS,
+                pipeline,
+            );
+
+            let viewport = vk::Viewport::default()
+                .x(0.0)
+                .y(0.0)
+                .width(extent.width as f32)
+                .height(extent.height as f32)
+                .min_depth(0.0)
+                .max_depth(1.0);
+
+            device.cmd_set_viewport(command_buffer, 0, std::slice::from_ref(&viewport));
+
+            let scissor = vk::Rect2D::default()
+                .offset(vk::Offset2D { x: 0, y: 0 })
+                .extent(extent);
+
+            device.cmd_set_scissor(command_buffer, 0, std::slice::from_ref(&scissor));
+
+            device.cmd_end_render_pass(command_buffer);
+
+            device
+                .end_command_buffer(command_buffer)
+                .map_err(|e| format!("Failed to end command buffer: {}", e))?;
+        }
+
+        Ok(())
+    }
+
+	pub fn record_command_buffer_with_mesh(
 		&self,
 		device: &ash::Device,
 		command_buffer: vk::CommandBuffer,
@@ -73,6 +144,11 @@ impl VulkanCommands {
 		render_pass: vk::RenderPass,
 		extent: vk::Extent2D,
 		pipeline: vk::Pipeline,
+		pipeline_layout: vk::PipelineLayout,
+		vertex_buffer: vk::Buffer,
+		index_buffer: vk::Buffer,
+		index_count: u32,
+		descriptor_set: vk::DescriptorSet,
 	) -> Result<(), String> {
 		let begin_info = vk::CommandBufferBeginInfo::default();
 
@@ -110,6 +186,12 @@ impl VulkanCommands {
 				pipeline
 			);
 
+			let vertex_buffers = [vertex_buffer];
+			let offsets = [0_u64];
+			device.cmd_bind_vertex_buffers(command_buffer, 0, &vertex_buffers, &offsets);
+
+			device.cmd_bind_index_buffer(command_buffer, index_buffer, 0, vk::IndexType::UINT32);
+
 			let viewport = vk::Viewport::default()
 				.x(0.0)
 				.y(0.0)
@@ -126,7 +208,16 @@ impl VulkanCommands {
 
 			device.cmd_set_scissor(command_buffer, 0, std::slice::from_ref(&scissor));
 
-			// Here: bind vertex / index buffers & draw
+			device.cmd_bind_descriptor_sets(
+				command_buffer,
+				vk::PipelineBindPoint::GRAPHICS,
+				pipeline_layout,
+				0,
+				&[descriptor_set],
+				&[],
+			);
+
+			device.cmd_draw_indexed(command_buffer, index_count, 1, 0, 0, 0);
 
 			device.cmd_end_render_pass(command_buffer);
 

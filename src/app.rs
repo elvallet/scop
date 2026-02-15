@@ -4,10 +4,13 @@ use winit::{
 	event_loop::ActiveEventLoop,
 	window::Window
 };
+use crate::mesh::Vertex;
 use crate::renderer::{
 	Renderer, VulkanDevice, VulkanInstance, VulkanPipeline, VulkanRenderPass, VulkanSwapchain
 };
 use ash::vk;
+use crate::mesh::Mesh;
+use crate::parser::obj::load_obj;
 
 pub struct App {
 	window: Option<Window>,
@@ -19,6 +22,8 @@ pub struct App {
 	render_pass: Option<VulkanRenderPass>,
 	pipeline: Option<VulkanPipeline>,
 	renderer: Option<Renderer>,
+	mesh: Option<Mesh>,
+	centroid: [f32; 3],
 }
 
 impl Default for App {
@@ -33,6 +38,8 @@ impl Default for App {
 			render_pass: None,
 			pipeline: None,
 			renderer: None,
+			mesh: None,
+			centroid: [0.0, 0.0, 0.0],
 		}
 	}
 }
@@ -85,8 +92,23 @@ impl ApplicationHandler for App {
 		)
 		.expect("Failed to create pipeline");
 
-		let renderer = Renderer::new(&device)
+		let mut renderer = Renderer::new(&vulkan_instance.instance, &device, &pipeline)
 			.expect("Failed to create renderer");
+
+		let mesh_path = std::env::args()
+			.nth(1)
+			.unwrap_or_else(|| "ressources/42.obj".to_string());
+
+		println!("Loading mesh: {}", mesh_path);
+
+		let mesh = load_obj(&mesh_path)
+			.expect(&format!("Failed to load mesh: {}", mesh_path));
+
+		let centroid = mesh.compute_centroid();
+		println!("Mesh centroid: {:?}", centroid);
+
+		renderer.load_mesh(&vulkan_instance.instance, &device, &mesh)
+			.expect("Failed to load mesh into GPU");
 
 		self.window = Some(window);
 		self.vulkan_instance = Some(vulkan_instance);
@@ -97,6 +119,12 @@ impl ApplicationHandler for App {
 		self.render_pass = Some(render_pass);
 		self.pipeline = Some(pipeline);
 		self.renderer = Some(renderer);
+		self.mesh = Some(mesh);
+		self.centroid = centroid;
+
+        if let Some(window) = &self.window {
+            window.request_redraw();
+        }
 	}
 
 	fn window_event(
@@ -119,6 +147,10 @@ impl ApplicationHandler for App {
 			}
 			WindowEvent::RedrawRequested => {
 				self.draw_frame();
+
+				if let Some(window) = &self.window {
+					window.request_redraw();
+				}
 			}
 			_ => {}
 		}	
@@ -130,7 +162,7 @@ impl App {
 		if let (Some(device), Some(swapchain), Some(render_pass), Some(pipeline), Some(renderer)) =
 			(&self.device, &self.swapchain, &self.render_pass, &self.pipeline, &mut self.renderer)
 		{
-			if let Err(e) = renderer.draw_frame(device, swapchain, render_pass, pipeline) {
+			if let Err(e) = renderer.draw_frame(device, swapchain, render_pass, pipeline, self.centroid) {
 				eprintln!("Failed to draw frame: {}", e);
 			}
 		}

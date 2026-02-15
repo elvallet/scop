@@ -54,20 +54,22 @@ impl VulkanPipeline {
 			.stage_flags(vk::ShaderStageFlags::VERTEX);
 
 		// Binding 1: Sampler (texture)
-		let sampler_binding = vk::DescriptorSetLayoutBinding::default()
-			.binding(1)
-			.descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
-			.descriptor_count(1)
-			.stage_flags(vk::ShaderStageFlags::FRAGMENT);
+		//let sampler_binding = vk::DescriptorSetLayoutBinding::default()
+		//	.binding(1)
+		//	.descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
+		//	.descriptor_count(1)
+		//	.stage_flags(vk::ShaderStageFlags::FRAGMENT);
 
-		// Binding 2: Uniform Buffer (mix factor)
-		let mix_binding = vk::DescriptorSetLayoutBinding::default()
-			.binding(2)
-			.descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
-			.descriptor_count(1)
-			.stage_flags(vk::ShaderStageFlags::FRAGMENT);
+		//// Binding 2: Uniform Buffer (mix factor)
+		//let mix_binding = vk::DescriptorSetLayoutBinding::default()
+		//	.binding(2)
+		//	.descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
+		//	.descriptor_count(1)
+		//	.stage_flags(vk::ShaderStageFlags::FRAGMENT);
 
-		let bindings = [ubo_binding, sampler_binding, mix_binding];
+		//let bindings = [ubo_binding, sampler_binding, mix_binding];
+
+		let bindings = [ ubo_binding ];
 
 		let layout_info = vk::DescriptorSetLayoutCreateInfo::default()
 			.bindings(&bindings);
@@ -193,7 +195,7 @@ impl VulkanPipeline {
 			.rasterizer_discard_enable(false)
 			.polygon_mode(vk::PolygonMode::FILL)
 			.line_width(1.0)
-			.cull_mode(vk::CullModeFlags::BACK)
+			.cull_mode(vk::CullModeFlags::NONE)
 			.front_face(vk::FrontFace::COUNTER_CLOCKWISE)
 			.depth_bias_enable(false);
 

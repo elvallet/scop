@@ -1,3 +1,4 @@
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct Vertex {
 	pub position: [f32; 3],
@@ -15,6 +16,13 @@ impl Vertex {
 			color: [0.0, 0.0, 0.0],
 		}
 	}
+    pub fn check_size() {
+        println!("Vertex size: {} bytes", std::mem::size_of::<Self>());
+        println!("  position offset: {}", 0);
+        println!("  tex_coords offset: {}", std::mem::offset_of!(Vertex, tex_coords));
+        println!("  normal offset: {}", std::mem::offset_of!(Vertex, normal));
+        println!("  color offset: {}", std::mem::offset_of!(Vertex, color));
+    }
 }
 
 #[derive(Debug)]
