@@ -348,21 +348,4 @@ f 1 2 3 4
         let obj = parse_obj_from_string(content).unwrap();
         assert_eq!(obj.faces.len(), 2);  // Triangulé
     }
-
-    #[test]
-    fn centroid_is_center() {
-        let content = "
-v -1.0 0.0 0.0
-v 1.0 0.0 0.0
-v 0.0 1.0 0.0
-f 1 2 3
-";
-        let mesh = parse_obj_from_string(content)
-            .map(obj_to_mesh)
-            .unwrap();
-        
-        let centroid = mesh.compute_centroid();
-        assert!((centroid[0] - 0.0).abs() < 0.01);
-        assert!((centroid[1] - 0.333).abs() < 0.01);
-    }
 }

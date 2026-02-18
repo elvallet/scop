@@ -35,23 +35,6 @@ pub struct Mesh {
 }
 
 impl Mesh {
-	pub fn compute_centroid(&self) -> [f32; 3] {
-		if self.vertices.is_empty() {
-			return [0.0, 0.0, 0.0];
-		}
-
-		let sum = self.vertices.iter().fold([0.0, 0.0, 0.0], |acc, v| {
-			[
-				acc[0] + v.position[0],
-				acc[1] + v.position[1],
-				acc[2] + v.position[2],
-			]
-		});
-
-		let n = self.vertices.len() as f32;
-		[sum[0] / n, sum[1] / n, sum[2] / n]
-	}
-
 	pub fn compute_bounding_box(&self) -> ([f32; 3], [f32; 3]) {
 		if self.vertices.is_empty() {
 			return ([0.0; 3], [0.0; 3]);
@@ -70,33 +53,25 @@ impl Mesh {
 		(min, max)
 	}
 
-	pub fn normalize(&mut self) {
-		let centroid = self.compute_centroid();
+pub fn normalize(&mut self) {
+    let (min, max) = self.compute_bounding_box();
 
-		for vertex in &mut self.vertices {
-			vertex.position[0] -= centroid[0];
-			vertex.position[1] -= centroid[1];
-			vertex.position[2] -= centroid[2];
-		}
+    let center = [
+        (min[0] + max[0]) / 2.0,
+        (min[1] + max[1]) / 2.0,
+        (min[2] + max[2]) / 2.0,
+    ];
 
-		let bounding_box = self.compute_bounding_box();
-		let mut max_bb = 0.0;
+    let max_half_extent = (0..3)
+        .map(|i| (max[i] - min[i]) / 2.0)
+        .fold(0.0_f32, f32::max);
 
-		for i in 0..3 {
-			let min_val = bounding_box.0[i];
-			let max_val = bounding_box.1[i];
-			let dim = (max_val - min_val).abs();
-			if dim > max_bb {
-				max_bb = dim;
-			}
-		}
-
-		for vertex in &mut self.vertices {
-			for i in 0..3 {
-				vertex.position[i] /= max_bb;
-			}
-		}
-	}
+    for vertex in &mut self.vertices {
+        for i in 0..3 {
+            vertex.position[i] = (vertex.position[i] - center[i]) / max_half_extent;
+        }
+    }
+}
 
 	pub fn compute_dominant_axis(&self) -> DominantAxis {
 		let bounding_box = self.compute_bounding_box();

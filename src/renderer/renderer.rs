@@ -86,7 +86,7 @@ impl Renderer {
 		let view = Transform::look_at(&eye, &target, &up);
 
 		let aspect = extent.width as f32 / extent.height as f32;
-		let proj = crate::math::projection(std::f32::consts::FRAC_PI_4, aspect, 0.1, 100.0);
+		let proj = crate::math::projection(std::f32::consts::FRAC_PI_6, aspect, 0.1, 100.0);
 
 		let ubo = UniformBufferObject {
 			model: matrix_to_array(&model),
@@ -254,15 +254,15 @@ fn matrix_to_array(m: &Matrix) -> [[f32; 4]; 4] {
 fn compute_eye_and_up(dominant_axis: DominantAxis) -> (Vector, Vector) {
 	match dominant_axis {
 		DominantAxis::X => (
-			Vector::new(vec![3.0, 0.0, 0.0]),
-			Vector::new(vec![0.0, 1.0, 0.0])
+			Vector::new(vec![10.0, 0.0, 0.0]),
+			Vector::new(vec![0.0, -1.0, 0.0])
 		),
 		DominantAxis::Y => (
-			Vector::new(vec![0.0, 3.0, 0.0]),
+			Vector::new(vec![0.0, 5.0, 0.0]),
 			Vector::new(vec![0.0, 0.0, 1.0])
 		),
 		DominantAxis::Z => (
-			Vector::new(vec![0.0, 0.0, 3.0]),
+			Vector::new(vec![0.0, 0.0, 5.0]),
 			Vector::new(vec![0.0, 1.0, 0.0])
 		)
 	}

@@ -106,11 +106,11 @@ impl ApplicationHandler for App {
 			.expect(&format!("Failed to load mesh: {}", mesh_path));
 
 		mesh.normalize();
-		let centroid = mesh.compute_centroid();
-		println!("Mesh centroid: {:?}", centroid);
 
+		let bbox = mesh.compute_bounding_box();
+		println!("BBox after normalize: min={:?} max={:?}", bbox.0, bbox.1);
 		let dominant_axis = mesh.compute_dominant_axis();
-		println!("Mesh dominant axis: {:?}", dominant_axis);
+		println!("Dominant axis: {:?}", dominant_axis);
 
 		renderer.load_mesh(&vulkan_instance.instance, &device, &mesh)
 			.expect("Failed to load mesh into GPU");
@@ -125,7 +125,8 @@ impl ApplicationHandler for App {
 		self.pipeline = Some(pipeline);
 		self.renderer = Some(renderer);
 		self.mesh = Some(mesh);
-		self.centroid = centroid;
+		self.centroid =[0.0, 0.0, 0.0];
+		self.dominant_axis = dominant_axis;
 
         if let Some(window) = &self.window {
             window.request_redraw();

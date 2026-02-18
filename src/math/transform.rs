@@ -72,10 +72,10 @@ pub fn look_at(eye: &Vector<f32>, target: &Vector<f32>, up: &Vector<f32>) -> Mat
     
     Matrix::new(
         vec![
-            r[0], r[1], r[2], -right.dot(eye),
-            u[0], u[1], u[2], -camera_up.dot(eye),
-            -f[0], -f[1], -f[2], forward.dot(eye),
-            0.0, 0.0, 0.0, 1.0
+			r[0], u[0], f[0], 0.0,         
+			r[1], u[1], f[1], 0.0,         
+			r[2], u[2], f[2], 0.0,         
+			-right.dot(eye), -camera_up.dot(eye), -forward.dot(eye), 1.0  
         ],
         4,
         4,
