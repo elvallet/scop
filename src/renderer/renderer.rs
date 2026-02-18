@@ -1,3 +1,4 @@
+use ash::sec;
 use ash::vk::{self, Extent2D};
 use std::time::Instant;
 use crate::renderer::{
@@ -5,7 +6,7 @@ use crate::renderer::{
 	VulkanPipeline, VulkanCommands, VulkanSync,
 	MeshBuffers, UniformBuffers, UniformBufferObject, Descriptors
 };
-use crate::mesh::Mesh;
+use crate::mesh::{DominantAxis, Mesh};
 use crate::math::{Matrix, Vector, Transform};
 
 pub struct Renderer {
@@ -72,6 +73,7 @@ impl Renderer {
 		current_frame: usize,
 		extent: Extent2D,
 		centroid: [f32; 3],
+		dominant_axis: DominantAxis,
 	) -> Result<(), String> {
 		let time = self.start_time.elapsed().as_secs_f32();
 
@@ -79,9 +81,8 @@ impl Renderer {
 
 		let model = Transform::rotation_y(angle);
 
-		let eye = Vector::new(vec![0.0, 0.0, 3.0]);
+		let (eye, up) = compute_eye_and_up(dominant_axis);
 		let target = Vector::new(vec![centroid[0], centroid[1], centroid[2]]);
-		let up = Vector::new(vec![0.0, 1.0, 0.0]);
 		let view = Transform::look_at(&eye, &target, &up);
 
 		let aspect = extent.width as f32 / extent.height as f32;
@@ -103,6 +104,7 @@ impl Renderer {
 		render_pass: &VulkanRenderPass,
 		pipeline: &VulkanPipeline,
 		centroid: [f32; 3],
+		dominant_axis: DominantAxis,
 	) -> Result<(), String> {
 		let current_frame = self.sync.current_frame;
 
@@ -140,7 +142,7 @@ impl Renderer {
 		}
 
 		// 4. Update uniforms
-		self.update_uniform_buffer(device, current_frame, swapchain.extent, centroid)?;
+		self.update_uniform_buffer(device, current_frame, swapchain.extent, centroid, dominant_axis)?;
 
 		// 5. Register commands
 		let command_buffer = self.commands.command_buffers[current_frame];
@@ -247,4 +249,21 @@ fn matrix_to_array(m: &Matrix) -> [[f32; 4]; 4] {
         [data[8], data[9], data[10], data[11]],
         [data[12], data[13], data[14], data[15]],
     ]
+}
+
+fn compute_eye_and_up(dominant_axis: DominantAxis) -> (Vector, Vector) {
+	match dominant_axis {
+		DominantAxis::X => (
+			Vector::new(vec![3.0, 0.0, 0.0]),
+			Vector::new(vec![0.0, 1.0, 0.0])
+		),
+		DominantAxis::Y => (
+			Vector::new(vec![0.0, 3.0, 0.0]),
+			Vector::new(vec![0.0, 0.0, 1.0])
+		),
+		DominantAxis::Z => (
+			Vector::new(vec![0.0, 0.0, 3.0]),
+			Vector::new(vec![0.0, 1.0, 0.0])
+		)
+	}
 }

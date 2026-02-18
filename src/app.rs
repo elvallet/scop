@@ -4,12 +4,11 @@ use winit::{
 	event_loop::ActiveEventLoop,
 	window::Window
 };
-use crate::mesh::Vertex;
 use crate::renderer::{
 	Renderer, VulkanDevice, VulkanInstance, VulkanPipeline, VulkanRenderPass, VulkanSwapchain
 };
 use ash::vk;
-use crate::mesh::Mesh;
+use crate::mesh::{Mesh, DominantAxis};
 use crate::parser::obj::load_obj;
 
 pub struct App {
@@ -24,6 +23,7 @@ pub struct App {
 	renderer: Option<Renderer>,
 	mesh: Option<Mesh>,
 	centroid: [f32; 3],
+	dominant_axis: DominantAxis,
 }
 
 impl Default for App {
@@ -40,6 +40,7 @@ impl Default for App {
 			renderer: None,
 			mesh: None,
 			centroid: [0.0, 0.0, 0.0],
+			dominant_axis: DominantAxis::X,
 		}
 	}
 }
@@ -108,6 +109,9 @@ impl ApplicationHandler for App {
 		let centroid = mesh.compute_centroid();
 		println!("Mesh centroid: {:?}", centroid);
 
+		let dominant_axis = mesh.compute_dominant_axis();
+		println!("Mesh dominant axis: {:?}", dominant_axis);
+
 		renderer.load_mesh(&vulkan_instance.instance, &device, &mesh)
 			.expect("Failed to load mesh into GPU");
 
@@ -163,7 +167,7 @@ impl App {
 		if let (Some(device), Some(swapchain), Some(render_pass), Some(pipeline), Some(renderer)) =
 			(&self.device, &self.swapchain, &self.render_pass, &self.pipeline, &mut self.renderer)
 		{
-			if let Err(e) = renderer.draw_frame(device, swapchain, render_pass, pipeline, self.centroid) {
+			if let Err(e) = renderer.draw_frame(device, swapchain, render_pass, pipeline, self.centroid, self.dominant_axis) {
 				eprintln!("Failed to draw frame: {}", e);
 			}
 		}

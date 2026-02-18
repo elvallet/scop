@@ -155,7 +155,7 @@ impl VulkanCommands {
 		unsafe {
 			device
 				.begin_command_buffer(command_buffer, &begin_info)
-				.map_err(|e| format!("Failed to vegin command buffer: {}", e))?;
+				.map_err(|e| format!("Failed to begin command buffer: {}", e))?;
 		}
 
 		let clear_color = vk::ClearValue {

@@ -7,6 +7,9 @@ pub struct Vertex {
 	pub color: [f32; 3],
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum DominantAxis { X, Y, Z }
+
 impl Vertex {
 	pub fn default() -> Self {
 		Self {
@@ -90,8 +93,31 @@ impl Mesh {
 
 		for vertex in &mut self.vertices {
 			for i in 0..3 {
-				vertex.position[i] /= (max_bb / 2.0);
+				vertex.position[i] /= max_bb;
 			}
+		}
+	}
+
+	pub fn compute_dominant_axis(&self) -> DominantAxis {
+		let bounding_box = self.compute_bounding_box();
+		let mut min_value = 2.0;
+		let mut min_indice: usize = 0;
+
+		for i in 0..3 {
+			let min = bounding_box.0[i];
+			let max = bounding_box.1[i];
+			let dim = (max - min).abs();
+			if dim < min_value {
+				min_value = dim;
+				min_indice = i;
+			}
+		}
+
+		match min_indice {
+			0 => DominantAxis::X,
+			1 => DominantAxis::Y,
+			2 => DominantAxis::Z,
+			_ => DominantAxis::X,
 		}
 	}
 }
