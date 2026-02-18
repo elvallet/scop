@@ -185,7 +185,7 @@ impl Renderer {
 		let wait_semaphores = [self.sync.image_available_semaphores[current_frame]];
 		let wait_stages = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
 		let command_buffers = [command_buffer];
-		let signal_semaphores = [self.sync.render_finished_semaphores[current_frame]];
+		let signal_semaphores = [self.sync.render_finished_semaphores[image_index as usize]];
 
 		let submit_info = vk::SubmitInfo::default()
 			.wait_semaphores(&wait_semaphores)

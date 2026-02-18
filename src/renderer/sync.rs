@@ -1,6 +1,7 @@
 use ash::vk;
 
 const MAX_FRAMES_IN_FLIGHT: usize = 2;
+const SWAPCHAIN_IMAGES_COUNT: usize = 3;
 
 pub struct VulkanSync {
 	pub image_available_semaphores: Vec<vk::Semaphore>,
@@ -26,17 +27,26 @@ impl VulkanSync {
 					.create_semaphore(&semaphore_info, None)
 					.map_err(|e| format!("Failed to create semaphore: {}", e))?;
 
-				let render_finished = device
-					.create_semaphore(&semaphore_info, None)
-					.map_err(|e| format!("Failed to create semaphore: {}", e))?;
+				//let render_finished = device
+				//	.create_semaphore(&semaphore_info, None)
+				//	.map_err(|e| format!("Failed to create semaphore: {}", e))?;
 
 				let fence = device
 					.create_fence(&fence_info, None)
 					.map_err(|e| format!("Failed to create fence: {}", e))?;
 
 				image_available_semaphores.push(image_available);
-				render_finished_semaphores.push(render_finished);
+			//	render_finished_semaphores.push(render_finished);
 				in_flight_fences.push(fence);
+			}
+		}
+
+		for _ in 0..SWAPCHAIN_IMAGES_COUNT {
+			unsafe {
+				let render_finished = device
+					.create_semaphore(&semaphore_info, None)
+					.map_err(|e| format!("Failed to create semaphore: {}", e))?;
+				render_finished_semaphores.push(render_finished);
 			}
 		}
 
@@ -58,8 +68,11 @@ impl VulkanSync {
 		unsafe {
 			for i in 0..MAX_FRAMES_IN_FLIGHT {
 				device.destroy_semaphore(self.image_available_semaphores[i], None);
-				device.destroy_semaphore(self.render_finished_semaphores[i], None);
 				device.destroy_fence(self.in_flight_fences[i], None);
+			}
+
+			for i in 0..SWAPCHAIN_IMAGES_COUNT {
+				device.destroy_semaphore(self.render_finished_semaphores[i], None);
 			}
 		}
 	}
