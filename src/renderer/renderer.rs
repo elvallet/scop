@@ -77,11 +77,7 @@ impl Renderer {
 
 		let angle = time * 0.5;
 
-		let to_origin = Transform::translation(-centroid[0], -centroid[1], -centroid[2]);
-		let rotation = Transform::rotation_y(angle);
-		let from_origin = Transform::translation(centroid[0], centroid[1], centroid[2]);
-
-		let model = from_origin.mul_mat(&rotation).mul_mat(&to_origin);
+		let model = Transform::rotation_y(angle);
 
 		let eye = Vector::new(vec![0.0, 0.0, 3.0]);
 		let target = Vector::new(vec![centroid[0], centroid[1], centroid[2]]);

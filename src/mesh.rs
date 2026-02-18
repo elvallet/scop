@@ -66,4 +66,32 @@ impl Mesh {
 
 		(min, max)
 	}
+
+	pub fn normalize(&mut self) {
+		let centroid = self.compute_centroid();
+
+		for vertex in &mut self.vertices {
+			vertex.position[0] -= centroid[0];
+			vertex.position[1] -= centroid[1];
+			vertex.position[2] -= centroid[2];
+		}
+
+		let bounding_box = self.compute_bounding_box();
+		let mut max_bb = 0.0;
+
+		for i in 0..3 {
+			let min_val = bounding_box.0[i];
+			let max_val = bounding_box.1[i];
+			let dim = (max_val - min_val).abs();
+			if dim > max_bb {
+				max_bb = dim;
+			}
+		}
+
+		for vertex in &mut self.vertices {
+			for i in 0..3 {
+				vertex.position[i] /= (max_bb / 2.0);
+			}
+		}
+	}
 }

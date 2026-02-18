@@ -101,9 +101,10 @@ impl ApplicationHandler for App {
 
 		println!("Loading mesh: {}", mesh_path);
 
-		let mesh = load_obj(&mesh_path)
+		let mut mesh = load_obj(&mesh_path)
 			.expect(&format!("Failed to load mesh: {}", mesh_path));
 
+		mesh.normalize();
 		let centroid = mesh.compute_centroid();
 		println!("Mesh centroid: {:?}", centroid);
 
