@@ -12,10 +12,12 @@ pub struct Renderer {
 	mesh_buffers: Option<MeshBuffers>,
 	uniform_buffers: UniformBuffers,
 	mix_factor_buffers: MixFactorBuffers,
-	pub mix_value: f32,
+	mix_value: f32,
 	descriptors: Descriptors,
 	start_time: Instant,
 	texture: Option<Texture>,
+	mix_target: f32,
+	last_frame_time: Instant,
 }
 
 impl Renderer {
@@ -47,9 +49,19 @@ impl Renderer {
 			mix_factor_buffers,
 			descriptors,
 			start_time: Instant::now(),
-			mix_value: 1.0,
+			mix_value: 0.0,
 			texture: Some(tex),
+			mix_target: 0.0,
+			last_frame_time: Instant::now(),
 		})
+	}
+
+	pub fn toggle_texture(&mut self) {
+		if self.mix_target < 0.5 {
+			self.mix_target = 1.0;
+		} else {
+			self.mix_target = 0.0;
+		}
 	}
 
 	pub fn load_mesh(
@@ -75,14 +87,20 @@ impl Renderer {
 	}
 
 	fn update_uniform_buffer(
-		&self,
+		&mut self,
 		device: &VulkanDevice,
 		current_frame: usize,
 		extent: Extent2D,
 		centroid: [f32; 3],
 		dominant_axis: DominantAxis,
 	) -> Result<(), String> {
+		let now = Instant::now();
+		let delta = now.duration_since(self.last_frame_time).as_secs_f32();
+		self.last_frame_time = now;
 		let time = self.start_time.elapsed().as_secs_f32();
+
+		let speed = 2.0;
+		self.mix_value += (self.mix_target - self.mix_value) * speed * delta;
 
 		let angle = time * 0.5;
 

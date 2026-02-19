@@ -107,8 +107,6 @@ impl ApplicationHandler for App {
 
 		mesh.normalize();
 
-		let bbox = mesh.compute_bounding_box();
-		println!("BBox after normalize: min={:?} max={:?}", bbox.0, bbox.1);
 		let dominant_axis = mesh.compute_dominant_axis();
 		println!("Dominant axis: {:?}", dominant_axis);
 
@@ -156,6 +154,22 @@ impl ApplicationHandler for App {
 
 				if let Some(window) = &self.window {
 					window.request_redraw();
+				}
+			}
+			WindowEvent::KeyboardInput { event, .. } => {
+				if event.state == winit::event::ElementState::Pressed {
+					use winit::keyboard::{PhysicalKey, KeyCode};
+					if let PhysicalKey::Code(keycode) = event.physical_key {
+						println!("Keycode pressed: {:?}", keycode);
+						match keycode {
+							KeyCode::KeyT => {
+								if let Some(renderer) = &mut self.renderer {
+									renderer.toggle_texture();
+								}
+							}
+							_ => {}
+						}
+					}
 				}
 			}
 			_ => {}
