@@ -53,12 +53,12 @@ impl VulkanPipeline {
 			.descriptor_count(1)
 			.stage_flags(vk::ShaderStageFlags::VERTEX);
 
-		//// Binding 1: Sampler (texture)
-		//let sampler_binding = vk::DescriptorSetLayoutBinding::default()
-		//	.binding(1)
-		//	.descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
-		//	.descriptor_count(1)
-		//	.stage_flags(vk::ShaderStageFlags::FRAGMENT);
+		// Binding 1: Sampler (texture)
+		let sampler_binding = vk::DescriptorSetLayoutBinding::default()
+			.binding(1)
+			.descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
+			.descriptor_count(1)
+			.stage_flags(vk::ShaderStageFlags::FRAGMENT);
 
 		// Binding 2: Uniform Buffer (mix factor)
 		let mix_binding = vk::DescriptorSetLayoutBinding::default()
@@ -67,7 +67,7 @@ impl VulkanPipeline {
 			.descriptor_count(1)
 			.stage_flags(vk::ShaderStageFlags::FRAGMENT);
 
-		let bindings = [ubo_binding, /*sampler_binding,*/ mix_binding];
+		let bindings = [ubo_binding, sampler_binding, mix_binding];
 
 		//let bindings = [ ubo_binding ];
 

@@ -1,5 +1,5 @@
 use ash::vk;
-use crate::renderer::{VulkanPipeline, UniformBuffers, MixFactorBuffers, sync::VulkanSync};
+use crate::renderer::{MixFactorBuffers, Texture, UniformBuffers, VulkanPipeline, sync::VulkanSync};
 
 pub struct Descriptors {
 	pub descriptor_pool: vk::DescriptorPool,
@@ -12,11 +12,16 @@ impl Descriptors {
 		pipeline: &VulkanPipeline,
 		uniform_buffers: &UniformBuffers,
 		mix_factor_buffers: &MixFactorBuffers,
+		texture: &Texture,
 	) -> Result<Self, String> {
 		let pool_sizes = [
 			vk::DescriptorPoolSize {
 				ty: vk::DescriptorType::UNIFORM_BUFFER,
 				descriptor_count: (VulkanSync::max_frames_in_flight() * 2) as u32,
+			},
+			vk::DescriptorPoolSize {
+				ty: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
+				descriptor_count: VulkanSync::max_frames_in_flight() as u32,
 			},
 		];
 
@@ -53,6 +58,11 @@ impl Descriptors {
 				.offset(0)
 				.range(mix_factor_buffers.buffers[i].size);
 
+			let image_info = vk::DescriptorImageInfo::default()
+				.image_layout(vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL)
+				.image_view(texture.image_view)
+				.sampler(texture.sampler);
+
 			let descriptor_writes = [
 				vk::WriteDescriptorSet::default()
 					.dst_set(descriptor_sets[i])
@@ -60,6 +70,12 @@ impl Descriptors {
 					.dst_array_element(0)
 					.descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
 					.buffer_info(std::slice::from_ref(&buffer_info)),
+				vk::WriteDescriptorSet::default()
+					.dst_set(descriptor_sets[i])
+					.dst_binding(1)
+					.dst_array_element(0)
+					.descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
+					.image_info(std::slice::from_ref(&image_info)),
 				vk::WriteDescriptorSet::default()
 					.dst_set(descriptor_sets[i])
 					.dst_binding(2)

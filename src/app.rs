@@ -93,7 +93,7 @@ impl ApplicationHandler for App {
 		)
 		.expect("Failed to create pipeline");
 
-		let mut renderer = Renderer::new(&vulkan_instance.instance, &device, &pipeline)
+		let mut renderer = Renderer::new(&vulkan_instance.instance, &device, &pipeline, "ressources/texture.jpg")
 			.expect("Failed to create renderer");
 
 		let mesh_path = std::env::args()

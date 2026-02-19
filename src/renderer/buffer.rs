@@ -88,7 +88,7 @@ impl Buffer {
 		Ok(())
 	}
 
-	fn find_memory_type(
+	pub fn find_memory_type(
 		instance: &ash::Instance,
 		physical_device: vk::PhysicalDevice,
 		type_filter: u32,

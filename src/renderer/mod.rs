@@ -10,6 +10,7 @@ mod renderer;
 mod shader;
 mod swapchain;
 mod sync;
+mod texture;
 mod uniform_buffer;
 
 pub use buffer::Buffer;
@@ -21,7 +22,7 @@ pub use mesh_buffer::MeshBuffers;
 pub use pipeline::VulkanPipeline;
 pub use render_pass::VulkanRenderPass;
 pub use renderer::Renderer;
-pub use shader::ShaderModule;
 pub use swapchain::VulkanSwapchain;
 pub use sync::VulkanSync;
+pub use texture::Texture;
 pub use uniform_buffer::{UniformBufferObject, UniformBuffers, MixFactorBuffers};

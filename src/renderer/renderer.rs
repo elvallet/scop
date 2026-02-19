@@ -1,10 +1,7 @@
 use ash::vk::{self, Extent2D};
 use std::time::Instant;
 use crate::renderer::{
-	VulkanDevice, VulkanSwapchain, VulkanRenderPass,
-	VulkanPipeline, VulkanCommands, VulkanSync,
-	MeshBuffers, UniformBuffers, UniformBufferObject, Descriptors,
-	MixFactorBuffers
+	Descriptors, MeshBuffers, MixFactorBuffers, Texture, UniformBufferObject, UniformBuffers, VulkanCommands, VulkanDevice, VulkanPipeline, VulkanRenderPass, VulkanSwapchain, VulkanSync
 };
 use crate::mesh::{DominantAxis, Mesh};
 use crate::math::{Matrix, Vector, Transform};
@@ -17,7 +14,8 @@ pub struct Renderer {
 	mix_factor_buffers: MixFactorBuffers,
 	pub mix_value: f32,
 	descriptors: Descriptors,
-	start_time: Instant
+	start_time: Instant,
+	texture: Option<Texture>,
 }
 
 impl Renderer {
@@ -25,6 +23,7 @@ impl Renderer {
 		instance: &ash::Instance,
 		device: &VulkanDevice,
 		pipeline: &VulkanPipeline,
+		path: &str
 	) -> Result<Self, String> {
 		let commands = VulkanCommands::new(
 			&device.device,
@@ -36,7 +35,9 @@ impl Renderer {
 		let uniform_buffers = UniformBuffers::new(instance, device)?;
 		let mix_factor_buffers = MixFactorBuffers::new(instance, device)?;
 
-		let descriptors = Descriptors::new(&device.device, pipeline, &uniform_buffers, &mix_factor_buffers)?;
+		let tex = Texture::new(path, instance, device, commands.command_pool)?;
+
+		let descriptors = Descriptors::new(&device.device, pipeline, &uniform_buffers, &mix_factor_buffers, &tex)?;
 
 		Ok(Self {
 			commands,
@@ -46,7 +47,8 @@ impl Renderer {
 			mix_factor_buffers,
 			descriptors,
 			start_time: Instant::now(),
-			mix_value: 0.0,
+			mix_value: 1.0,
+			texture: Some(tex),
 		})
 	}
 
@@ -235,6 +237,9 @@ impl Renderer {
 	pub fn cleanup(&self, device: &ash::Device) {
 		if let Some(mesh_buffers) = &self.mesh_buffers {
 			mesh_buffers.cleanup(device);
+		}
+		if let Some(tex) = &self.texture {
+			tex.cleanup(device);
 		}
 		self.uniform_buffers.cleanup(device);
 		self.mix_factor_buffers.cleanup(device);
