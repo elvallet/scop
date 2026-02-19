@@ -1,5 +1,6 @@
 mod buffer;
 mod command;
+mod depth;
 mod descriptors;
 mod device;
 pub mod instance;
@@ -15,6 +16,7 @@ mod uniform_buffer;
 
 pub use buffer::Buffer;
 pub use command::VulkanCommands;
+pub use depth::DepthBuffer;
 pub use descriptors::Descriptors;
 pub use device::VulkanDevice;
 pub use instance::VulkanInstance;

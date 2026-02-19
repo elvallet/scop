@@ -82,11 +82,14 @@ impl VulkanCommands {
                 .map_err(|e| format!("Failed to begin command buffer: {}", e))?;
         }
 
-        let clear_color = vk::ClearValue {
-            color: vk::ClearColorValue {
-                float32: [0.1, 0.1, 0.15, 1.0], // Bleu-gris foncé
-            },
-        };
+		let clear_values = [
+			vk::ClearValue {
+				color: vk::ClearColorValue { float32: [0.1, 0.1, 0.15, 1.0] },
+			},
+			vk::ClearValue {
+				depth_stencil: vk::ClearDepthStencilValue { depth: 1.0, stencil: 0 },
+			},
+		];
 
         let render_pass_info = vk::RenderPassBeginInfo::default()
             .render_pass(render_pass)
@@ -95,7 +98,7 @@ impl VulkanCommands {
                 offset: vk::Offset2D { x: 0, y: 0 },
                 extent,
             })
-            .clear_values(std::slice::from_ref(&clear_color));
+            .clear_values(&clear_values);
 
         unsafe {
             device.cmd_begin_render_pass(
@@ -158,11 +161,14 @@ impl VulkanCommands {
 				.map_err(|e| format!("Failed to begin command buffer: {}", e))?;
 		}
 
-		let clear_color = vk::ClearValue {
-			color: vk::ClearColorValue {
-				float32: [0.1, 0.1, 0.15, 1.0],
+		let clear_values = [
+			vk::ClearValue {
+				color: vk::ClearColorValue { float32: [0.1, 0.1, 0.15, 1.0] },
 			},
-		};
+			vk::ClearValue {
+				depth_stencil: vk::ClearDepthStencilValue { depth: 1.0, stencil: 0 },
+			},
+		];
 
 		let render_pass_info = vk::RenderPassBeginInfo::default()
 			.render_pass(render_pass)
@@ -171,7 +177,7 @@ impl VulkanCommands {
 				offset: vk::Offset2D { x: 0, y: 0 },
 				extent,
 			})
-			.clear_values(std::slice::from_ref(&clear_color));
+			.clear_values(&clear_values);
 
 		unsafe {
 			device.cmd_begin_render_pass(

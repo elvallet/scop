@@ -1,4 +1,4 @@
-use ash::vk;
+use ash::{qcom, vk};
 use crate::mesh::Vertex;
 use crate::renderer::shader::ShaderModule;
 
@@ -195,7 +195,7 @@ impl VulkanPipeline {
 			.rasterizer_discard_enable(false)
 			.polygon_mode(vk::PolygonMode::FILL)
 			.line_width(1.0)
-			.cull_mode(vk::CullModeFlags::NONE)
+			.cull_mode(vk::CullModeFlags::BACK)
 			.front_face(vk::FrontFace::COUNTER_CLOCKWISE)
 			.depth_bias_enable(false);
 
@@ -226,6 +226,14 @@ impl VulkanPipeline {
 		let dynamic_state = vk::PipelineDynamicStateCreateInfo::default()
 			.dynamic_states(&dynamic_states);
 
+		// ===== DEPTH STENCIL =====
+		let depth_stencil = vk::PipelineDepthStencilStateCreateInfo::default()
+			.depth_test_enable(true)
+			.depth_write_enable(true)
+			.depth_compare_op(vk::CompareOp::LESS)
+			.depth_bounds_test_enable(false)
+			.stencil_test_enable(false);
+
 		// ===== CREATE PIPELINE =====
 		let pipeline_info = vk::GraphicsPipelineCreateInfo::default()
 			.stages(&shader_stages)
@@ -238,7 +246,8 @@ impl VulkanPipeline {
 			.dynamic_state(&dynamic_state)
 			.layout(pipeline_layout)
 			.render_pass(render_pass)
-			.subpass(0);
+			.subpass(0)
+			.depth_stencil_state(&depth_stencil);
 
 		let pipelines = unsafe {
 			device

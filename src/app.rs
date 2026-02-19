@@ -5,7 +5,7 @@ use winit::{
 	window::Window
 };
 use crate::renderer::{
-	Renderer, VulkanDevice, VulkanInstance, VulkanPipeline, VulkanRenderPass, VulkanSwapchain
+	DepthBuffer, Renderer, VulkanDevice, VulkanInstance, VulkanPipeline, VulkanRenderPass, VulkanSwapchain
 };
 use ash::vk;
 use crate::mesh::{Mesh, DominantAxis};
@@ -24,6 +24,7 @@ pub struct App {
 	mesh: Option<Mesh>,
 	centroid: [f32; 3],
 	dominant_axis: DominantAxis,
+	depth_buffer: Option<DepthBuffer>,
 }
 
 impl Default for App {
@@ -41,6 +42,7 @@ impl Default for App {
 			mesh: None,
 			centroid: [0.0, 0.0, 0.0],
 			dominant_axis: DominantAxis::X,
+			depth_buffer: None,
 		}
 	}
 }
@@ -78,11 +80,20 @@ impl ApplicationHandler for App {
 		)
 		.expect("Failed to create swapchain");
 
+		let depth_buffer = DepthBuffer::new(
+			&vulkan_instance.instance,
+			&device,
+			swapchain.extent.width,
+			swapchain.extent.height
+		)
+		.expect("Failed to create depth buffer");
+
 		let render_pass = VulkanRenderPass::new(
 			&device.device,
 			swapchain.format,
 			&swapchain.image_views,
 			swapchain.extent,
+			&depth_buffer,
 		)
 		.expect("Failed to create render pass");
 
@@ -125,6 +136,7 @@ impl ApplicationHandler for App {
 		self.mesh = Some(mesh);
 		self.centroid =[0.0, 0.0, 0.0];
 		self.dominant_axis = dominant_axis;
+		self.depth_buffer = Some(depth_buffer);
 
         if let Some(window) = &self.window {
             window.request_redraw();
@@ -189,25 +201,47 @@ impl App {
 	}
 
 	fn handle_resize(&mut self, width: u32, height: u32) {
+		unsafe {
+			if let Some(device) = &self.device {
+				device.device.device_wait_idle().expect("Failed to wait for device idle");
+			}
+		}
+
 		if let (Some(instance), Some(device), Some(surface),
-				Some(surface_loader), Some(swapchain), Some(render_pass),
+				Some(surface_loader), Some(render_pass),
 				Some(pipeline)) =
-			(&self.vulkan_instance, &self.device, self.surface, &self.surface_loader, &mut self.swapchain,
+			(&self.vulkan_instance, &self.device, self.surface, &self.surface_loader,
 				&mut self.render_pass, &mut self.pipeline)
 		{
-			swapchain.recreate(
+			if let Some(swapchain) = &mut self.swapchain {
+				swapchain.recreate(
+					&instance.instance,
+					device,
+					surface,
+					surface_loader,
+					width,
+					height,
+				).unwrap();
+			}
+
+			// Cleanup old depth buffer before creating new one
+			if let Some(old_depth_buffer) = &self.depth_buffer {
+				old_depth_buffer.cleanup(&device.device);
+			}
+
+			self.depth_buffer = DepthBuffer::new(
 				&instance.instance,
 				device,
-				surface,
-				surface_loader,
-				width,
-				height,
-			).expect("Failed to recreate swapchain");
+				self.swapchain.as_ref().unwrap().extent.width,
+				self.swapchain.as_ref().unwrap().extent.height
+			).ok();
 
+			let swapchain = self.swapchain.as_ref().unwrap();
 			render_pass.recreate_framebuffers(
 				&device.device,
 				&swapchain.image_views,
-				swapchain.extent
+				swapchain.extent,
+				self.depth_buffer.as_ref().expect("Depth buffer not initialized")
 			).expect("Failed to framebuffers");
 
 			pipeline.cleanup(&device.device);
@@ -239,6 +273,11 @@ impl App {
 				render_pass.cleanup(&device.device);
 			}
 			drop(self.render_pass.take());
+
+			if let (Some(depth_buffer), Some(device)) = (&self.depth_buffer, &self.device) {
+				depth_buffer.cleanup(&device.device);
+			}
+			drop(self.depth_buffer.take());
 
 			if let (Some(swapchain), Some(device)) = (&mut self.swapchain, &self.device) {
 				swapchain.cleanup(&device.device);

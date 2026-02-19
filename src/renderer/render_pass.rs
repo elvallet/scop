@@ -1,5 +1,7 @@
 use ash::vk;
 
+use crate::renderer::DepthBuffer;
+
 pub struct VulkanRenderPass {
 	pub render_pass: vk::RenderPass,
 	pub framebuffers: Vec<vk::Framebuffer>,
@@ -11,6 +13,7 @@ impl VulkanRenderPass {
 		swapchain_format: vk::Format,
 		swapchain_image_views: &[vk::ImageView],
 		swapchain_extent: vk::Extent2D,
+		depth_buffer: &DepthBuffer,
 	) -> Result<Self, String> {
 		let render_pass = Self::create_render_pass(device, swapchain_format)?;
 
@@ -19,6 +22,7 @@ impl VulkanRenderPass {
 			render_pass,
 			swapchain_image_views,
 			swapchain_extent,
+			depth_buffer
 		)?;
 
 		Ok(Self {
@@ -41,13 +45,28 @@ impl VulkanRenderPass {
 			.initial_layout(vk::ImageLayout::UNDEFINED)
 			.final_layout(vk::ImageLayout::PRESENT_SRC_KHR);
 
+		let depth_attachment = vk::AttachmentDescription::default()
+			.format(DepthBuffer::FORMAT)
+			.samples(vk::SampleCountFlags::TYPE_1)
+			.load_op(vk::AttachmentLoadOp::CLEAR)
+			.store_op(vk::AttachmentStoreOp::DONT_CARE)
+			.stencil_load_op(vk::AttachmentLoadOp::DONT_CARE)
+			.stencil_store_op(vk::AttachmentStoreOp::DONT_CARE)
+			.initial_layout(vk::ImageLayout::UNDEFINED)
+			.final_layout(vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
 		let color_attachment_ref = vk::AttachmentReference::default()
 			.attachment(0)
 			.layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL);
 
+		let depth_attachment_ref = vk::AttachmentReference::default()
+			.attachment(1)
+			.layout(vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
 		let subpass = vk::SubpassDescription::default()
 			.pipeline_bind_point(vk::PipelineBindPoint::GRAPHICS)
-			.color_attachments(std::slice::from_ref(&color_attachment_ref));
+			.color_attachments(std::slice::from_ref(&color_attachment_ref))
+			.depth_stencil_attachment(&depth_attachment_ref);
 
 		// Subpass' dependency
 		// It ensures that:
@@ -56,12 +75,12 @@ impl VulkanRenderPass {
 		let dependency = vk::SubpassDependency::default()
 			.src_subpass(vk::SUBPASS_EXTERNAL)
 			.dst_subpass(0)
-			.src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+			.src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT | vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS)
 			.src_access_mask(vk::AccessFlags::empty())
-			.dst_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-			.dst_access_mask(vk::AccessFlags::COLOR_ATTACHMENT_WRITE);
+			.dst_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT | vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS)
+			.dst_access_mask(vk::AccessFlags::COLOR_ATTACHMENT_WRITE | vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE);
 
-		let attachments = [color_attachment];
+		let attachments = [color_attachment, depth_attachment];
 		let subpasses = [subpass];
 		let dependencies = [dependency];
 
@@ -86,11 +105,12 @@ impl VulkanRenderPass {
 		render_pass: vk::RenderPass,
 		image_views: &[vk::ImageView],
 		extent: vk::Extent2D,
+		depth_buffer: &DepthBuffer,
 	) -> Result<Vec<vk::Framebuffer>, String> {
 		let framebuffers: Result<Vec<_>, _> = image_views
 			.iter()
 			.map(|&image_view| {
-				let attachments = [image_view];
+				let attachments = [image_view, depth_buffer.image_view];
 
 				let frambuffer_info = vk::FramebufferCreateInfo::default()
 					.render_pass(render_pass)
@@ -119,6 +139,7 @@ impl VulkanRenderPass {
 		device: &ash::Device,
 		image_views: &[vk::ImageView],
 		extent: vk::Extent2D,
+		depth_buffer: &DepthBuffer
 	) -> Result<(), String> {
 		for &framebuffer in &self.framebuffers {
 			unsafe {
@@ -130,7 +151,8 @@ impl VulkanRenderPass {
 			device,
 			self.render_pass,
 			image_views,
-			extent
+			extent,
+			depth_buffer
 		)?;
 
 		println!("✓ Framebuffers recreated");
