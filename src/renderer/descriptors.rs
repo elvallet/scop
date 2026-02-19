@@ -1,5 +1,5 @@
 use ash::vk;
-use crate::renderer::{VulkanPipeline, UniformBuffers, sync::VulkanSync};
+use crate::renderer::{VulkanPipeline, UniformBuffers, MixFactorBuffers, sync::VulkanSync};
 
 pub struct Descriptors {
 	pub descriptor_pool: vk::DescriptorPool,
@@ -10,12 +10,13 @@ impl Descriptors {
 	pub fn new(
 		device: &ash::Device,
 		pipeline: &VulkanPipeline,
-		uniform_buffers: &UniformBuffers
+		uniform_buffers: &UniformBuffers,
+		mix_factor_buffers: &MixFactorBuffers,
 	) -> Result<Self, String> {
 		let pool_sizes = [
 			vk::DescriptorPoolSize {
 				ty: vk::DescriptorType::UNIFORM_BUFFER,
-				descriptor_count: VulkanSync::max_frames_in_flight() as u32,
+				descriptor_count: (VulkanSync::max_frames_in_flight() * 2) as u32,
 			},
 		];
 
@@ -47,6 +48,11 @@ impl Descriptors {
 				.offset(0)
 				.range(uniform_buffers.buffers[i].size);
 
+			let mix_buffer_info = vk::DescriptorBufferInfo::default()
+				.buffer(mix_factor_buffers.buffers[i].buffer)
+				.offset(0)
+				.range(mix_factor_buffers.buffers[i].size);
+
 			let descriptor_writes = [
 				vk::WriteDescriptorSet::default()
 					.dst_set(descriptor_sets[i])
@@ -54,6 +60,12 @@ impl Descriptors {
 					.dst_array_element(0)
 					.descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
 					.buffer_info(std::slice::from_ref(&buffer_info)),
+				vk::WriteDescriptorSet::default()
+					.dst_set(descriptor_sets[i])
+					.dst_binding(2)
+					.dst_array_element(0)
+					.descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
+					.buffer_info(std::slice::from_ref(&mix_buffer_info)),
 			];
 
 			unsafe {

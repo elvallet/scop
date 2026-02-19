@@ -1,10 +1,10 @@
-use ash::sec;
 use ash::vk::{self, Extent2D};
 use std::time::Instant;
 use crate::renderer::{
 	VulkanDevice, VulkanSwapchain, VulkanRenderPass,
 	VulkanPipeline, VulkanCommands, VulkanSync,
-	MeshBuffers, UniformBuffers, UniformBufferObject, Descriptors
+	MeshBuffers, UniformBuffers, UniformBufferObject, Descriptors,
+	MixFactorBuffers
 };
 use crate::mesh::{DominantAxis, Mesh};
 use crate::math::{Matrix, Vector, Transform};
@@ -14,6 +14,8 @@ pub struct Renderer {
 	sync:VulkanSync,
 	mesh_buffers: Option<MeshBuffers>,
 	uniform_buffers: UniformBuffers,
+	mix_factor_buffers: MixFactorBuffers,
+	pub mix_value: f32,
 	descriptors: Descriptors,
 	start_time: Instant
 }
@@ -32,16 +34,19 @@ impl Renderer {
 		let sync = VulkanSync::new(&device.device)?;
 
 		let uniform_buffers = UniformBuffers::new(instance, device)?;
+		let mix_factor_buffers = MixFactorBuffers::new(instance, device)?;
 
-		let descriptors = Descriptors::new(&device.device, pipeline, &uniform_buffers)?;
+		let descriptors = Descriptors::new(&device.device, pipeline, &uniform_buffers, &mix_factor_buffers)?;
 
 		Ok(Self {
 			commands,
 			sync,
 			mesh_buffers: None,
 			uniform_buffers,
+			mix_factor_buffers,
 			descriptors,
 			start_time: Instant::now(),
+			mix_value: 0.0,
 		})
 	}
 
@@ -94,7 +99,10 @@ impl Renderer {
 			proj: matrix_to_array(&proj),
 		};
 
-		self.uniform_buffers.update(&device.device, current_frame, &ubo)
+		self.uniform_buffers.update(&device.device, current_frame, &ubo)?;
+		self.mix_factor_buffers.update(&device.device, current_frame, self.mix_value)?;
+
+		Ok(())
 	}
 
 	pub fn draw_frame(
@@ -229,6 +237,7 @@ impl Renderer {
 			mesh_buffers.cleanup(device);
 		}
 		self.uniform_buffers.cleanup(device);
+		self.mix_factor_buffers.cleanup(device);
 		self.descriptors.cleanup(device);
 		self.commands.cleanup(device);
 		self.sync.cleanup(device);

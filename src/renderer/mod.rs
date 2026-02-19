@@ -24,4 +24,4 @@ pub use renderer::Renderer;
 pub use shader::ShaderModule;
 pub use swapchain::VulkanSwapchain;
 pub use sync::VulkanSync;
-pub use uniform_buffer::{UniformBufferObject, UniformBuffers};
+pub use uniform_buffer::{UniformBufferObject, UniformBuffers, MixFactorBuffers};

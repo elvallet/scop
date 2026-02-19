@@ -55,3 +55,43 @@ impl Drop for UniformBuffers {
 		
 	}
 }
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct MixFactorUBO {
+	pub mix_value: f32,
+}
+
+pub struct MixFactorBuffers {
+	pub buffers: Vec<Buffer>,
+}
+
+impl MixFactorBuffers {
+	pub fn new(instance: &ash::Instance, device: &VulkanDevice) -> Result<Self, String> {
+		let buffer_size = std::mem::size_of::<MixFactorUBO>() as vk::DeviceSize;
+		let mut buffers = Vec::new();
+
+		for _ in 0..VulkanSync::max_frames_in_flight() {
+			let buffer = Buffer::new(
+				instance, device, buffer_size,
+				vk::BufferUsageFlags::UNIFORM_BUFFER,
+				vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
+			)?;
+			buffers.push(buffer);
+		}
+
+		println!("✓ Mix factor buffers created");
+		Ok(Self { buffers })
+	}
+
+	pub fn update(&self, device: &ash::Device, frame_index: usize, value: f32) -> Result<(), String> {
+		let ubo = MixFactorUBO { mix_value: value };
+		self.buffers[frame_index].upload_data(device, std::slice::from_ref(&ubo))
+	}
+
+	pub fn cleanup(&self, device: &ash::Device) {
+		for buffer in &self.buffers {
+			buffer.cleanup(device);
+		}
+	}
+}
