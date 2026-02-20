@@ -61,26 +61,26 @@ impl Transform {
 		Matrix::new(v, 4, 4)
 	}
 
-pub fn look_at(eye: &Vector<f32>, target: &Vector<f32>, up: &Vector<f32>) -> Matrix<f32> {
-    let forward = target.sub_vec(eye).normalize();
-    let right = forward.cross(up).normalize();
-    let camera_up = right.cross(&forward);
-    
-    let f = forward.as_slice();
-    let r = right.as_slice();
-    let u = camera_up.as_slice();
-    
-    Matrix::new(
-        vec![
-			r[0], u[0], f[0], 0.0,         
-			r[1], u[1], f[1], 0.0,         
-			r[2], u[2], f[2], 0.0,         
-			-right.dot(eye), -camera_up.dot(eye), -forward.dot(eye), 1.0  
-        ],
-        4,
-        4,
-    )
-}
+	pub fn look_at(eye: &Vector<f32>, target: &Vector<f32>, up: &Vector<f32>) -> Matrix<f32> {
+		let forward = target.sub_vec(eye).normalize();
+		let right = forward.cross(up).normalize();
+		let camera_up = right.cross(&forward);
+		
+		let f = forward.as_slice();
+		let r = right.as_slice();
+		let u = camera_up.as_slice();
+		
+		Matrix::new(
+			vec![
+				r[0], u[0], f[0], 0.0,         
+				r[1], u[1], f[1], 0.0,         
+				r[2], u[2], f[2], 0.0,         
+				-right.dot(eye), -camera_up.dot(eye), -forward.dot(eye), 1.0  
+			],
+			4,
+			4,
+		)
+	}
 }
 
 #[cfg(test)]

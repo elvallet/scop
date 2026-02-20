@@ -2,6 +2,36 @@ use std::collections::HashMap;
 
 use crate::mesh::{Mesh, Vertex};
 
+struct BoudingBox {
+	min: [f32; 3],
+	max: [f32; 3],
+}
+
+impl BoudingBox {
+	fn from_positions(positions: &[[f32; 3]]) -> Self {
+		let mut min = [f32::MAX; 3];
+		let mut max = [f32::NEG_INFINITY; 3];
+
+		for pos in positions {
+			for axis in 0..3 {
+				if pos[axis] < min[axis] { min[axis] = pos[axis]; }
+				if pos[axis] > max[axis] { max[axis] = pos[axis]; }
+			}
+		}
+
+		Self { min, max }
+	}
+
+	fn normalize(&self, value: f32, axis: usize) -> f32 {
+		let range = self.max[axis] - self.min[axis];
+		if range > 0.0001 {
+			(value - self.min[axis]) / range
+		} else {
+			0.0
+		}
+	}
+}
+
 #[derive(Debug, Clone)]
 pub struct ObjData {
 	positions: Vec<[f32; 3]>,
@@ -240,19 +270,25 @@ pub fn obj_to_mesh(obj: ObjData) -> Mesh {
 	let mut indices = Vec::new();
 	let mut vertex_cache: HashMap<VertexKey, u32> = HashMap::new();
 
+	let bbox = BoudingBox::from_positions(&obj.positions);
+
 	for (face_idx, face) in obj.faces.iter().enumerate() {
+		let face_normal = compute_face_normal(&obj, face);
+
 		for face_vertex in &face.vertices {
 			let position = obj.positions[face_vertex.position_idx];
 
-			let tex_coords = face_vertex.tex_coord_idx
-				.map(|i| obj.tex_coords[i])
-				.unwrap_or([0.0, 0.0]);
+			let tex_coords = match face_vertex.tex_coord_idx {
+				Some(i) => obj.tex_coords[i],
+				None => generate_planar_uv(position, face_normal, &bbox),
+			};
 
 			let normal = face_vertex.normal_idx
 				.map(|i| obj.normals[i])
-				.unwrap_or_else(|| compute_face_normal(&obj, face));
+				.unwrap_or(face_normal);
 
 			let color = generate_face_color(face_idx);
+
 			let vertex = Vertex {
 				position,
 				tex_coords,
@@ -315,6 +351,25 @@ fn compute_face_normal(obj: &ObjData, face: &Face) -> [f32; 3] {
 	}
 }
 
+
+fn generate_planar_uv(position: [f32; 3], face_normal: [f32; 3], bbox: &BoudingBox) -> [f32; 2] {
+	let ax = face_normal[0].abs();
+	let ay = face_normal[1].abs();
+	let az = face_normal[2].abs();
+
+	let (u_axis, v_axis) = if ax >= ay && ax >= az {
+		(1, 2)
+	} else if ay >= ax && ay >= az {
+		(0, 2)
+	} else {
+		(0, 1)
+	};
+
+	let u = bbox.normalize(position[u_axis], u_axis);
+	let v = bbox.normalize(position[v_axis], v_axis);
+
+	[u, v]
+}
 
 #[cfg(test)]
 mod tests {

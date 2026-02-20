@@ -20,7 +20,7 @@ impl Texture {
 	) -> Result<Self, String> {
 		let img = image::open(path)
 			.map_err(|e| format!("Failed to open texture: {}: {}", path, e))?
-			.to_rgb8();
+			.to_rgba8();
 
 		let (width, height) = img.dimensions();
 		let pixels = img.into_raw();
